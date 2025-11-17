@@ -68,6 +68,68 @@ GraphQL adalah bahasa kueri level aplikasi yang membutuhkan mekanisme IPC (biasa
 
 #### nomor 3
 
+1. membuat file docker-compose 
+
+version: '3.8'
+
+    services:
+  
+     postgres-primary:
+  
+    image: postgres:15
+    container_name: postgres-primary
+    hostname: postgres-primary
+    ports:
+      - "5432:5432" # Port primary (host:container)
+    volumes:
+      - primary_data:/var/lib/postgresql/data
+      - ./primary/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./primary/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_DB=app_db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin_pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d app_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
+
+ 
+    postgres-standby:
+    image: postgres:15
+    container_name: postgres-standby
+    hostname: postgres-standby
+    ports:
+      - "5433:5432" # Port standby (host:container)
+    depends_on:
+      postgres-primary:
+        condition: service_healthy # Menunggu primary sehat
+    volumes:
+      - standby_data:/var/lib/postgresql/data
+      - ./standby/entrypoint.sh:/entrypoint.sh
+    environment:
+      - PGDATA=/var/lib/postgresql/data
+      # Variabel untuk skrip entrypoint
+      - PRIMARY_HOST=postgres-primary
+      - REPL_USER=repl_user
+      - REPL_PASS=repl_pass
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    command: ["postgres"] # Perintah ini diteruskan ke entrypoint.sh
+
+        volumes:
+        primary_data:
+        standby_data:
+
+2. eksekusi docker-compose.yml
+
+![alt text](gambar1.png)
+
+3. membuat table 
+
+
 
 
 
